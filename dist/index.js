@@ -11247,50 +11247,50 @@ var require_fast_uri = __commonJS({
       schemelessOptions.skipEscape = true;
       return serialize(resolved, schemelessOptions);
     }
-    function resolveComponent(base, relative7, options, skipNormalization) {
+    function resolveComponent(base, relative8, options, skipNormalization) {
       const target = {};
       if (!skipNormalization) {
         base = parse7(serialize(base, options), options);
-        relative7 = parse7(serialize(relative7, options), options);
+        relative8 = parse7(serialize(relative8, options), options);
       }
       options = options || {};
-      if (!options.tolerant && relative7.scheme) {
-        target.scheme = relative7.scheme;
-        target.userinfo = relative7.userinfo;
-        target.host = relative7.host;
-        target.port = relative7.port;
-        target.path = removeDotSegments(relative7.path || "");
-        target.query = relative7.query;
+      if (!options.tolerant && relative8.scheme) {
+        target.scheme = relative8.scheme;
+        target.userinfo = relative8.userinfo;
+        target.host = relative8.host;
+        target.port = relative8.port;
+        target.path = removeDotSegments(relative8.path || "");
+        target.query = relative8.query;
       } else {
-        if (relative7.userinfo !== void 0 || relative7.host !== void 0 || relative7.port !== void 0) {
-          target.userinfo = relative7.userinfo;
-          target.host = relative7.host;
-          target.port = relative7.port;
-          target.path = removeDotSegments(relative7.path || "");
-          target.query = relative7.query;
+        if (relative8.userinfo !== void 0 || relative8.host !== void 0 || relative8.port !== void 0) {
+          target.userinfo = relative8.userinfo;
+          target.host = relative8.host;
+          target.port = relative8.port;
+          target.path = removeDotSegments(relative8.path || "");
+          target.query = relative8.query;
         } else {
-          if (!relative7.path) {
+          if (!relative8.path) {
             target.path = base.path;
-            if (relative7.query !== void 0) {
-              target.query = relative7.query;
+            if (relative8.query !== void 0) {
+              target.query = relative8.query;
             } else {
               target.query = base.query;
             }
           } else {
-            if (relative7.path[0] === "/") {
-              target.path = removeDotSegments(relative7.path);
+            if (relative8.path[0] === "/") {
+              target.path = removeDotSegments(relative8.path);
             } else {
               const baseHasAuthority = base.userinfo !== void 0 || base.host !== void 0 || base.port !== void 0;
               if (baseHasAuthority && !base.path) {
-                target.path = "/" + relative7.path;
+                target.path = "/" + relative8.path;
               } else if (!base.path) {
-                target.path = relative7.path;
+                target.path = relative8.path;
               } else {
-                target.path = base.path.slice(0, base.path.lastIndexOf("/") + 1) + relative7.path;
+                target.path = base.path.slice(0, base.path.lastIndexOf("/") + 1) + relative8.path;
               }
               target.path = base.scheme === void 0 && !baseHasAuthority && target.path[0] !== "/" ? removeDotSegmentsRelative(target.path) : removeDotSegments(target.path);
             }
-            target.query = relative7.query;
+            target.query = relative8.query;
           }
           target.userinfo = base.userinfo;
           target.host = base.host;
@@ -11298,7 +11298,7 @@ var require_fast_uri = __commonJS({
         }
         target.scheme = base.scheme;
       }
-      target.fragment = relative7.fragment;
+      target.fragment = relative8.fragment;
       return target;
     }
     function equal(uriA, uriB, options) {
@@ -14592,7 +14592,7 @@ var require_dist2 = __commonJS({
 });
 
 // src/run.ts
-import { readFile as readFile13, stat as stat8 } from "node:fs/promises";
+import { readFile as readFile14, stat as stat9 } from "node:fs/promises";
 import { resolve as resolve11 } from "node:path";
 
 // ../core/dist/data/alternatives.json
@@ -41553,6 +41553,57 @@ function evaluateBudgets(diff, budgets) {
   return { results, status, unmatched };
 }
 
+// ../core/dist/limits.js
+var REPORT_LIMITS = {
+  /** Size of a report file or JSON text. */
+  maxBytes: 2e7,
+  /** Nesting depth. A report nests 9 levels at most (an app's assets → packages → versions). */
+  maxDepth: 16,
+  /** Items in any array; the largest schema bound is 50 000 (entries, dependencies). */
+  maxArrayLength: 5e4,
+  /** Characters in any string or object key. */
+  maxStringLength: 1024,
+  /** Keys in any object; objects in a report have about 15 keys. */
+  maxObjectKeys: 100,
+  /** Values (objects, arrays, strings, numbers…) in the whole report. */
+  maxNodes: 5e6
+};
+function findLimitViolation(input2, limits = REPORT_LIMITS) {
+  const stack = [{ value: input2, depth: 1 }];
+  let nodes = 0;
+  for (let frame = stack.pop(); frame !== void 0; frame = stack.pop()) {
+    const { value, depth } = frame;
+    nodes += 1;
+    if (nodes > limits.maxNodes)
+      return `has more than ${limits.maxNodes} values`;
+    if (typeof value === "string") {
+      if (value.length > limits.maxStringLength)
+        return `has a string longer than ${limits.maxStringLength} characters`;
+      continue;
+    }
+    if (typeof value !== "object" || value === null)
+      continue;
+    if (depth > limits.maxDepth)
+      return `is nested deeper than ${limits.maxDepth} levels`;
+    if (Array.isArray(value)) {
+      if (value.length > limits.maxArrayLength)
+        return `has an array with more than ${limits.maxArrayLength} items`;
+      for (const item of value)
+        stack.push({ value: item, depth: depth + 1 });
+      continue;
+    }
+    const keys = Object.keys(value);
+    if (keys.length > limits.maxObjectKeys)
+      return `has an object with more than ${limits.maxObjectKeys} keys`;
+    for (const key of keys) {
+      if (key.length > limits.maxStringLength)
+        return `has a key longer than ${limits.maxStringLength} characters`;
+      stack.push({ value: value[key], depth: depth + 1 });
+    }
+  }
+  return void 0;
+}
+
 // ../core/dist/schema.js
 var REPORT_SCHEMA_VERSION = 1;
 var bytes = external_exports.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
@@ -41649,6 +41700,22 @@ var archiveSchema = external_exports.object({
     uncompressed: bytes,
     count: external_exports.number().int().nonnegative()
   })).max(20),
+  /** Native libraries (`lib/<abi>/`) per ABI in an APK or AAB; absent without native libraries. */
+  abis: external_exports.array(external_exports.object({
+    abi: external_exports.string().min(1).max(100),
+    compressed: bytes,
+    uncompressed: bytes,
+    count: external_exports.number().int().nonnegative()
+  })).max(20).optional(),
+  /**
+   * Estimated download size of an AAB on a device with this ABI and screen density, as a Play
+   * Store split APK set would be (ADR 0009). An estimate, not a measurement of the store.
+   */
+  downloads: external_exports.array(external_exports.object({
+    abi: external_exports.string().min(1).max(100),
+    density: external_exports.string().min(1).max(20),
+    bytes
+  })).max(10).optional(),
   entries: external_exports.array(external_exports.object({
     path: pathText,
     category: archiveCategorySchema,
@@ -41657,6 +41724,14 @@ var archiveSchema = external_exports.object({
   })).max(5e4),
   /** Entries left out of `entries` by the collector, aggregated. */
   omittedEntries: external_exports.object({ count: external_exports.number().int().nonnegative(), compressed: bytes, uncompressed: bytes }).optional()
+});
+var updateSchema = external_exports.object({
+  platform: platformSchema,
+  /** The launch bundle, relative to the export directory. */
+  file: pathText,
+  bundleBytes: bytes,
+  assetCount: external_exports.number().int().nonnegative(),
+  assetBytes: bytes
 });
 var lighthouseContaminationSchema = external_exports.object({
   /**
@@ -41730,6 +41805,8 @@ var appSchema = external_exports.object({
   routes: external_exports.array(routeSchema).max(2e3).optional(),
   bundles: external_exports.array(jsBundleSchema).max(10).optional(),
   archives: external_exports.array(archiveSchema).max(20).optional(),
+  /** Expo updates (OTA), one per platform, separate from the store archives. */
+  updates: external_exports.array(updateSchema).max(2).optional(),
   lighthouse: external_exports.array(lighthouseSchema).max(50).optional(),
   dependencies: external_exports.array(dependencySchema).max(5e4).optional()
 });
@@ -41776,7 +41853,25 @@ var ReportValidationError = class extends Error {
   }
 };
 var MAX_REPORTED_ISSUES = 20;
+function parseReportText(text2) {
+  if (text2.length > REPORT_LIMITS.maxBytes) {
+    throw new ReportValidationError(`report is larger than ${REPORT_LIMITS.maxBytes} characters`, []);
+  }
+  let json2;
+  try {
+    json2 = JSON.parse(text2);
+  } catch (error62) {
+    if (!(error62 instanceof SyntaxError) && !(error62 instanceof RangeError))
+      throw error62;
+    throw new ReportValidationError("report is not valid JSON", []);
+  }
+  return parseReport(json2);
+}
 function parseReport(input2) {
+  const violation = findLimitViolation(input2);
+  if (violation !== void 0) {
+    throw new ReportValidationError(`report ${violation}`, []);
+  }
   if (typeof input2 === "object" && input2 !== null && "schemaVersion" in input2) {
     const version3 = input2.schemaVersion;
     if (typeof version3 === "number" && version3 > REPORT_SCHEMA_VERSION) {
@@ -42105,8 +42200,42 @@ function archiveMetrics(app) {
       unit: "bytes",
       direction: "lower-is-better",
       value: category.compressed
+    })),
+    ...(archive.abis ?? []).map((abi) => ({
+      id: `archive[${archive.key}].abi[${abi.abi}]`,
+      group: "archive",
+      label: `${archive.key}: native libraries ${abi.abi} (compressed)`,
+      unit: "bytes",
+      direction: "lower-is-better",
+      value: abi.compressed
+    })),
+    ...(archive.downloads ?? []).map((download) => ({
+      id: `archive[${archive.key}].download[${download.abi}]`,
+      group: "archive",
+      label: `${archive.key}: estimated download on ${download.abi} (${download.density})`,
+      unit: "bytes",
+      direction: "lower-is-better",
+      value: download.bytes
     }))
   ]);
+}
+function updateMetrics(updates) {
+  return updates.flatMap((update) => {
+    const label = `${PLATFORM_LABEL[update.platform]} Expo update`;
+    const metric = (part, text2, value) => ({
+      id: `update[${update.platform}].${part}`,
+      group: "update",
+      label: `${label}: ${text2}`,
+      unit: "bytes",
+      direction: "lower-is-better",
+      value
+    });
+    return [
+      metric("total", "bundle and assets", update.bundleBytes + update.assetBytes),
+      metric("bundle", "bundle", update.bundleBytes),
+      metric("assets", "assets", update.assetBytes)
+    ];
+  });
 }
 var LIGHTHOUSE_METRICS = [
   { name: "performance", label: "Performance score", unit: "score", direction: "higher-is-better" },
@@ -42139,6 +42268,7 @@ function extractMetrics(app) {
     ...routeMetrics(app),
     ...bundleMetrics(app.bundles ?? []),
     ...archiveMetrics(app),
+    ...updateMetrics(app.updates ?? []),
     ...lighthouseMetrics(app.lighthouse ?? []),
     ...packageMetrics(app)
   ];
@@ -43274,6 +43404,67 @@ function categorize(format, path) {
     return "resources";
   return "other";
 }
+function abiOf(format, path) {
+  if (format === "ipa")
+    return void 0;
+  const inner = format === "aab" ? path.replace(/^[^/]+\//, "") : path;
+  return /^lib\/([^/]+)\/[^/]/.exec(inner)?.[1];
+}
+var DENSITY_DPI = {
+  ldpi: 120,
+  mdpi: 160,
+  tvdpi: 213,
+  hdpi: 240,
+  xhdpi: 320,
+  xxhdpi: 480,
+  xxxhdpi: 640
+};
+var DEVICE_PROFILES = [
+  { abi: "arm64-v8a", density: "xxhdpi" },
+  { abi: "armeabi-v7a", density: "xhdpi" },
+  { abi: "x86_64", density: "xxhdpi" }
+];
+function estimateDownloads(entries2, profiles = DEVICE_PROFILES) {
+  let base = 0;
+  const libs = /* @__PURE__ */ new Map();
+  const resources = /* @__PURE__ */ new Map();
+  for (const { path, compressed } of entries2) {
+    if (!path.includes("/") || path.startsWith("BUNDLE-METADATA/") || path.startsWith("META-INF/"))
+      continue;
+    const abi = abiOf("aab", path);
+    if (abi !== void 0) {
+      libs.set(abi, (libs.get(abi) ?? 0) + compressed);
+      continue;
+    }
+    const resource = /^([^/]+)\/res\/([^/]+)\/(.+)$/.exec(path);
+    const [, module = "", directory = "", file2 = ""] = resource ?? [];
+    const qualifiers = directory.split("-");
+    const density = qualifiers.map((q) => DENSITY_DPI[q]).find((dpi) => dpi !== void 0);
+    if (density === void 0) {
+      base += compressed;
+      continue;
+    }
+    const key = `${module}/${qualifiers.filter((q) => DENSITY_DPI[q] === void 0).join("-")}/${file2}`;
+    const variants = resources.get(key) ?? [];
+    variants.push([density, compressed]);
+    resources.set(key, variants);
+  }
+  const downloads = [];
+  for (const { abi, density } of profiles) {
+    const lib = libs.get(abi);
+    const wanted = DENSITY_DPI[density];
+    if (lib === void 0 || wanted === void 0)
+      continue;
+    let bytes2 = base + lib;
+    for (const variants of resources.values()) {
+      const rank = ([dpi]) => dpi >= wanted ? dpi - wanted : (wanted - dpi) * 1e3;
+      const [best] = [...variants].sort((a, b) => rank(a) - rank(b));
+      bytes2 += best?.[1] ?? 0;
+    }
+    downloads.push({ abi, density, bytes: bytes2 });
+  }
+  return downloads;
+}
 function detectFormat(file2, entries2) {
   const extension = /\.(apk|aab|ipa)$/i.exec(file2)?.[1]?.toLowerCase();
   if (extension === "apk" || extension === "aab" || extension === "ipa")
@@ -43298,6 +43489,7 @@ async function analyzeArchive(options) {
     const platform2 = format === "ipa" ? "ios" : "android";
     const minEntryBytes = options.minEntryBytes ?? 1e3;
     const categories = /* @__PURE__ */ new Map();
+    const abis = /* @__PURE__ */ new Map();
     const kept = [];
     const omitted = { count: 0, compressed: 0, uncompressed: 0 };
     let bundle;
@@ -43310,6 +43502,14 @@ async function analyzeArchive(options) {
       total.uncompressed += entry.uncompressed;
       total.count += 1;
       categories.set(category, total);
+      const abi = abiOf(format, entry.path);
+      if (abi !== void 0) {
+        const abiTotal = abis.get(abi) ?? { compressed: 0, uncompressed: 0, count: 0 };
+        abiTotal.compressed += entry.compressed;
+        abiTotal.uncompressed += entry.uncompressed;
+        abiTotal.count += 1;
+        abis.set(abi, abiTotal);
+      }
       if (entry.compressed >= minEntryBytes) {
         kept.push({
           path: entry.path,
@@ -43323,6 +43523,7 @@ async function analyzeArchive(options) {
         omitted.uncompressed += entry.uncompressed;
       }
     }
+    const downloads = format === "aab" ? estimateDownloads(entries2) : [];
     const hermes = bundle === void 0 ? void 0 : isHermesBytecode(await readEntryPrefix(handle, bundle));
     return {
       archive: {
@@ -43333,6 +43534,10 @@ async function analyzeArchive(options) {
         fileSize: size,
         entryCount: entries2.length,
         categories: [...categories.entries()].map(([category, total]) => ({ category, ...total })).sort((a, b) => b.compressed - a.compressed),
+        ...abis.size > 0 ? {
+          abis: [...abis.entries()].map(([abi, total]) => ({ abi, ...total })).sort((a, b) => b.compressed - a.compressed || a.abi.localeCompare(b.abi))
+        } : {},
+        ...downloads.length > 0 ? { downloads } : {},
         entries: kept.sort((a, b) => b.compressed - a.compressed || a.path.localeCompare(b.path)),
         ...omitted.count > 0 ? { omittedEntries: omitted } : {}
       },
@@ -45496,9 +45701,82 @@ async function measureNextApp(options) {
   };
 }
 
+// ../measure/dist/expo-update.js
+import { lstat, readFile as readFile10 } from "node:fs/promises";
+import { isAbsolute, join as join13, relative as relative5 } from "node:path";
+var PLATFORMS = ["android", "ios"];
+function isRecord(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function platformFiles(value) {
+  if (!isRecord(value) || typeof value["bundle"] !== "string")
+    return void 0;
+  const assets = Array.isArray(value["assets"]) ? value["assets"] : [];
+  const paths = assets.flatMap((asset) => isRecord(asset) && typeof asset["path"] === "string" ? [asset["path"]] : []);
+  return { bundle: value["bundle"], assets: [...new Set(paths)] };
+}
+async function sizeInside(dir, path) {
+  const outside = relative5(dir, join13(dir, path));
+  if (isAbsolute(path) || outside.startsWith("..") || isAbsolute(outside))
+    return "is outside the export directory";
+  const info = await lstat(join13(dir, path)).catch(() => void 0);
+  if (info === void 0)
+    return "is listed in metadata.json but missing";
+  if (!info.isFile())
+    return "is not a regular file";
+  return info.size;
+}
+async function measureExpoUpdates(distDir) {
+  const file2 = join13(distDir, "metadata.json");
+  const text2 = await readFile10(file2, "utf8").catch(() => void 0);
+  const updates = [];
+  const warnings = [];
+  if (text2 === void 0)
+    return { updates, warnings };
+  let metadata;
+  try {
+    metadata = JSON.parse(text2);
+  } catch {
+    return { updates, warnings: [{ file: file2, message: "is not valid JSON; update size skipped" }] };
+  }
+  const platforms = isRecord(metadata) ? metadata["fileMetadata"] : void 0;
+  if (!isRecord(platforms))
+    return { updates, warnings: [{ file: file2, message: "has no fileMetadata; update size skipped" }] };
+  for (const platform2 of PLATFORMS) {
+    if (!(platform2 in platforms))
+      continue;
+    const files = platformFiles(platforms[platform2]);
+    if (files === void 0) {
+      warnings.push({ file: file2, message: `has no bundle for ${platform2}; update size skipped` });
+      continue;
+    }
+    const bundleBytes = await sizeInside(distDir, files.bundle);
+    if (typeof bundleBytes === "string") {
+      warnings.push({
+        file: join13(distDir, files.bundle),
+        message: `${bundleBytes}; ${platform2} update size skipped`
+      });
+      continue;
+    }
+    let assetBytes = 0;
+    let assetCount = 0;
+    for (const asset of files.assets) {
+      const size = await sizeInside(distDir, asset);
+      if (typeof size === "string") {
+        warnings.push({ file: join13(distDir, asset), message: `${size}; not counted` });
+        continue;
+      }
+      assetBytes += size;
+      assetCount += 1;
+    }
+    updates.push({ platform: platform2, file: files.bundle, bundleBytes, assetCount, assetBytes });
+  }
+  return { updates, warnings };
+}
+
 // ../measure/dist/rn.js
-import { readFile as readFile10, readdir as readdir5 } from "node:fs/promises";
-import { join as join13, posix as posix7, relative as relative5, sep as sep5 } from "node:path";
+import { readFile as readFile11, readdir as readdir5 } from "node:fs/promises";
+import { join as join14, posix as posix7, relative as relative6, sep as sep5 } from "node:path";
 function attributeHermes(byteLength, map2, mapDir = ".", isForeign, versionOf) {
   const sourceBytes = /* @__PURE__ */ new Map();
   let attributed = 0;
@@ -45519,9 +45797,9 @@ function attributeHermes(byteLength, map2, mapDir = ".", isForeign, versionOf) {
   return { ...classified, unattributedBytes: byteLength - attributed + foreignBytes };
 }
 async function measureBundle(input2, appDir, maxModules = 100, appPath) {
-  const content = await readFile10(input2.file);
+  const content = await readFile11(input2.file);
   const hermes = isHermesBytecode(content);
-  const display = relative5(appDir, input2.file).split(sep5).join("/");
+  const display = relative6(appDir, input2.file).split(sep5).join("/");
   const bundle = {
     platform: input2.platform,
     file: display,
@@ -45533,7 +45811,7 @@ async function measureBundle(input2, appDir, maxModules = 100, appPath) {
   const mapFile = input2.map ?? `${input2.file}.map`;
   let map2;
   try {
-    map2 = parseSourceMap(await readFile10(mapFile, "utf8"));
+    map2 = parseSourceMap(await readFile11(mapFile, "utf8"));
   } catch (error62) {
     const missing = error62.code === "ENOENT";
     if (!missing && !(error62 instanceof SourceMapError))
@@ -45544,7 +45822,7 @@ async function measureBundle(input2, appDir, maxModules = 100, appPath) {
     });
   }
   if (map2 !== void 0) {
-    const mapDir = posix7.dirname(relative5(appDir, mapFile).split(sep5).join("/"));
+    const mapDir = posix7.dirname(relative6(appDir, mapFile).split(sep5).join("/"));
     const isForeign = await foreignSources(map2, mapDir, appDir, appPath);
     const versionOf = await installedVersions(map2, mapDir, appDir);
     const attribution = hermes ? attributeHermes(content.byteLength, map2, mapDir, isForeign, versionOf) : attributeBytes(content.toString("utf8"), map2, mapDir, isForeign, versionOf);
@@ -45558,11 +45836,11 @@ async function measureBundle(input2, appDir, maxModules = 100, appPath) {
 async function findExpoBundles(distDir) {
   const bundles = [];
   for (const platform2 of ["android", "ios"]) {
-    const dir = join13(distDir, "_expo", "static", "js", platform2);
+    const dir = join14(distDir, "_expo", "static", "js", platform2);
     const files = await readdir5(dir).catch(() => []);
     const bundle = files.filter((f) => /\.(hbc|js)$/.test(f)).sort()[0];
     if (bundle !== void 0)
-      bundles.push({ platform: platform2, file: join13(dir, bundle) });
+      bundles.push({ platform: platform2, file: join14(dir, bundle) });
   }
   return bundles;
 }
@@ -45588,6 +45866,9 @@ async function measureRnApp(options) {
       warnings.push({ file: input2.file, message: error62.message });
     }
   }
+  const update = options.updateDir === void 0 ? void 0 : await measureExpoUpdates(options.updateDir);
+  if (update !== void 0)
+    warnings.push(...update.warnings);
   return {
     app: {
       id: options.id,
@@ -45597,6 +45878,7 @@ async function measureRnApp(options) {
       framework: options.framework,
       ...bundles.length > 0 ? { bundles } : {},
       ...archives.length > 0 ? { archives } : {},
+      ...update !== void 0 && update.updates.length > 0 ? { updates: update.updates } : {},
       ...options.dependencies === void 0 ? {} : { dependencies: [...options.dependencies] }
     },
     warnings
@@ -45607,7 +45889,7 @@ async function measureRnApp(options) {
 import { createReadStream } from "node:fs";
 import { stat as stat4 } from "node:fs/promises";
 import { createServer } from "node:http";
-import { extname, join as join14, normalize, sep as sep6 } from "node:path";
+import { extname, join as join15, normalize, sep as sep6 } from "node:path";
 import { createGzip } from "node:zlib";
 var TYPES2 = {
   ".html": "text/html; charset=utf-8",
@@ -45630,11 +45912,11 @@ var TYPES2 = {
 var COMPRESSIBLE = /^(text\/|application\/(json|javascript)|image\/svg)/;
 async function resolveFile(root, pathname) {
   const decoded = decodeURIComponent(pathname);
-  const relative7 = normalize(decoded).replace(/^([/\\])+/, "");
-  if (relative7.split(sep6).includes(".."))
+  const relative8 = normalize(decoded).replace(/^([/\\])+/, "");
+  if (relative8.split(sep6).includes(".."))
     return void 0;
-  const base = join14(root, relative7);
-  const candidates = decoded.endsWith("/") ? [join14(base, "index.html")] : [base, `${base}.html`, join14(base, "index.html")];
+  const base = join15(root, relative8);
+  const candidates = decoded.endsWith("/") ? [join15(base, "index.html")] : [base, `${base}.html`, join15(base, "index.html")];
   for (const candidate of candidates) {
     const info = await stat4(candidate).catch(() => void 0);
     if (info?.isFile() === true)
@@ -45681,7 +45963,7 @@ function serveStatic(root) {
 import { spawn } from "node:child_process";
 import { stat as stat5 } from "node:fs/promises";
 import { createServer as createServer2 } from "node:net";
-import { dirname as dirname2, join as join15, resolve as resolve6 } from "node:path";
+import { dirname as dirname2, join as join16, resolve as resolve6 } from "node:path";
 var ServerError = class extends Error {
   name = "ServerError";
 };
@@ -45753,7 +46035,7 @@ function startCommand(command, cwd, url2, timeoutMs = 6e4) {
 async function findNextBin(appDir) {
   let dir = resolve6(appDir);
   for (; ; ) {
-    const candidate = join15(dir, "node_modules", "next", "dist", "bin", "next");
+    const candidate = join16(dir, "node_modules", "next", "dist", "bin", "next");
     if ((await stat5(candidate).catch(() => void 0))?.isFile() === true)
       return candidate;
     const parent = dirname2(dir);
@@ -45795,7 +46077,7 @@ function createReport(options) {
 import { parseArgs as parseArgs4 } from "node:util";
 
 // ../cli/dist/commands/diff.js
-import { readFile as readFile11, writeFile } from "node:fs/promises";
+import { readFile as readFile12, stat as stat6, writeFile } from "node:fs/promises";
 import { resolve as resolve7 } from "node:path";
 import { parseArgs } from "node:util";
 
@@ -45830,19 +46112,17 @@ var COMPRESSIONS = /* @__PURE__ */ new Set(["gzip", "brotli", "raw"]);
 async function readReport(path, role) {
   let text2;
   try {
-    text2 = await readFile11(path, "utf8");
+    if ((await stat6(path)).size > REPORT_LIMITS.maxBytes)
+      throw new UsageError(`${role} report ${path} is larger than ${REPORT_LIMITS.maxBytes} bytes`);
+    text2 = await readFile12(path, "utf8");
   } catch (error62) {
+    if (error62 instanceof UsageError)
+      throw error62;
     const code = error62.code ?? "unknown error";
     throw new UsageError(`cannot read ${role} report ${path}: ${code}`);
   }
-  let json2;
   try {
-    json2 = JSON.parse(text2);
-  } catch {
-    throw new UsageError(`${role} report ${path} is not valid JSON`);
-  }
-  try {
-    return parseReport(json2);
+    return parseReportText(text2);
   } catch (error62) {
     if (error62 instanceof ReportValidationError) {
       throw new UsageError(`${role} report ${path}: ${error62.message}`);
@@ -45917,8 +46197,8 @@ async function diffCommand(argv, io) {
 }
 
 // ../cli/dist/commands/init.js
-import { mkdir, readFile as readFile12, readdir as readdir6, stat as stat6, writeFile as writeFile2 } from "node:fs/promises";
-import { dirname as dirname3, join as join16, resolve as resolve8 } from "node:path";
+import { mkdir, readFile as readFile13, readdir as readdir6, stat as stat7, writeFile as writeFile2 } from "node:fs/promises";
+import { dirname as dirname3, join as join17, resolve as resolve8 } from "node:path";
 import { parseArgs as parseArgs2 } from "node:util";
 var INIT_HELP = `Usage:
   usertax init [options]
@@ -45951,7 +46231,7 @@ async function detectPackageManager(root) {
   if (names.has("bun.lock") || names.has("bun.lockb"))
     return "bun";
   if (names.has("yarn.lock")) {
-    const lock = await readFile12(join16(root, "yarn.lock"), "utf8");
+    const lock = await readFile13(join17(root, "yarn.lock"), "utf8");
     return lock.includes("__metadata:") ? "yarn" : "yarn-classic";
   }
   return "npm";
@@ -46101,9 +46381,9 @@ function starterConfig(apps) {
 async function appNotes(root, apps) {
   const notes = [];
   const config2 = async (dir, prefix) => {
-    const files = await readdir6(join16(root, dir)).catch(() => []);
+    const files = await readdir6(join17(root, dir)).catch(() => []);
     const file2 = files.find((f) => f.startsWith(prefix) && /\.(?:[cm]?[jt]s)$/.test(f));
-    return file2 === void 0 ? void 0 : readFile12(join16(root, dir, file2), "utf8");
+    return file2 === void 0 ? void 0 : readFile13(join17(root, dir, file2), "utf8");
   };
   for (const app of apps) {
     const where = app.path === "." ? "the root app" : app.path;
@@ -46155,14 +46435,14 @@ async function appNotes(root, apps) {
   return notes;
 }
 async function exists2(path) {
-  return await stat6(path).catch(() => void 0) !== void 0;
+  return await stat7(path).catch(() => void 0) !== void 0;
 }
 async function defaultBranch(root) {
-  const remote = await readFile12(join16(root, ".git", "refs", "remotes", "origin", "HEAD"), "utf8").catch(() => "");
+  const remote = await readFile13(join17(root, ".git", "refs", "remotes", "origin", "HEAD"), "utf8").catch(() => "");
   const fromRemote = /^ref: refs\/remotes\/origin\/(.+)$/m.exec(remote)?.[1]?.trim();
   if (fromRemote !== void 0)
     return fromRemote;
-  const head = await readFile12(join16(root, ".git", "HEAD"), "utf8").catch(() => "");
+  const head = await readFile13(join17(root, ".git", "HEAD"), "utf8").catch(() => "");
   const current = /^ref: refs\/heads\/(.+)$/m.exec(head)?.[1]?.trim();
   return current === "master" ? "master" : "main";
 }
@@ -46219,7 +46499,7 @@ async function initCommand(argv, io, context) {
   const written = [];
   const skipped = [];
   for (const file2 of files) {
-    const target = join16(root, file2.path);
+    const target = join17(root, file2.path);
     if (dryRun) {
       io.stdout(`--- ${file2.path}
 ${file2.content}
@@ -46258,8 +46538,8 @@ ${file2.content}
 }
 
 // ../cli/dist/commands/measure.js
-import { stat as stat7, writeFile as writeFile3 } from "node:fs/promises";
-import { basename as basename2, relative as relative6, resolve as resolve9, sep as sep7 } from "node:path";
+import { stat as stat8, writeFile as writeFile3 } from "node:fs/promises";
+import { basename as basename2, relative as relative7, resolve as resolve9, sep as sep7 } from "node:path";
 import { parseArgs as parseArgs3 } from "node:util";
 var MEASURE_HELP = `Usage:
   usertax measure [app-dir] [options]
@@ -46336,11 +46616,11 @@ var FRAMEWORKS = /* @__PURE__ */ new Set([
   "react-native",
   "other"
 ]);
-var PLATFORMS = /* @__PURE__ */ new Set(["android", "ios"]);
+var PLATFORMS2 = /* @__PURE__ */ new Set(["android", "ios"]);
 var SHA = /^[0-9a-f]{40}$/;
 function parseBundle(value, cwd) {
   const match = /^(android|ios)=(.+)$/.exec(value);
-  if (match?.[1] === void 0 || match[2] === void 0 || !PLATFORMS.has(match[1])) {
+  if (match?.[1] === void 0 || match[2] === void 0 || !PLATFORMS2.has(match[1])) {
     throw new UsageError(`--bundle expects <android|ios>=<file>, received "${value}"`);
   }
   return { platform: match[1], file: resolve9(cwd, match[2]) };
@@ -46420,7 +46700,7 @@ async function runPages(spec, app, framework, appDir, outDir, io) {
   }
 }
 async function isDirectory(path) {
-  return (await stat7(path).catch(() => void 0))?.isDirectory() === true;
+  return (await stat8(path).catch(() => void 0))?.isDirectory() === true;
 }
 async function measureApp(spec, repoRoot, io, prefix) {
   const pkg = await readPackageJson(spec.dir);
@@ -46442,14 +46722,14 @@ async function measureApp(spec, repoRoot, io, prefix) {
     }
   }
   const needsOutDir = !mobile || framework === "expo" && spec.bundles.length === 0;
-  const outStat = needsOutDir ? await stat7(outDir).catch(() => void 0) : void 0;
+  const outStat = needsOutDir ? await stat8(outDir).catch(() => void 0) : void 0;
   if (needsOutDir && !outStat?.isDirectory() && !(mobile && spec.archives.length > 0)) {
     throw new UsageError(mobile ? `${outDir} not found; run expo export --source-maps first, or pass --bundle / --archive` : `build output ${outDir} not found; build the app first or pass --out-dir`);
   }
   if (framework === "react-native" && spec.bundles.length === 0 && spec.archives.length === 0) {
     throw new UsageError("pass --bundle <android|ios>=<file> and/or --archive <file> for a React Native app");
   }
-  const path = relative6(repoRoot, spec.dir).split(sep7).join("/") || ".";
+  const path = relative7(repoRoot, spec.dir).split(sep7).join("/") || ".";
   const id = spec.id ?? appIdFrom(pkg?.name, spec.dir);
   let lock;
   try {
@@ -46474,7 +46754,8 @@ async function measureApp(spec, repoRoot, io, prefix) {
     ...common,
     framework,
     bundles: spec.bundles.length > 0 || outStat === void 0 ? spec.bundles : await findExpoBundles(outDir),
-    archives: spec.archives
+    archives: spec.archives,
+    ...framework === "expo" && outStat !== void 0 ? { updateDir: outDir } : {}
   }) : await (framework === "next" ? measureNextApp : measureWebApp)({
     ...common,
     outDir,
@@ -46617,7 +46898,7 @@ async function measureCommand(argv, io, context) {
   const apps = [];
   const ids = /* @__PURE__ */ new Set();
   for (const spec of specs) {
-    const prefix = specs.length > 1 ? `${relative6(repoRoot, spec.dir) || "."}: ` : "";
+    const prefix = specs.length > 1 ? `${relative7(repoRoot, spec.dir) || "."}: ` : "";
     const app = await measureApp(spec, repoRoot, io, prefix);
     if (ids.has(app.id))
       throw new UsageError(`two apps have the id "${app.id}"; set distinct ids in usertax.config.json`);
@@ -46645,7 +46926,7 @@ async function measureCommand(argv, io, context) {
 // ../cli/dist/mcp.js
 import { mkdtemp, writeFile as writeFile4 } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join as join17, resolve as resolve10 } from "node:path";
+import { join as join18, resolve as resolve10 } from "node:path";
 
 // ../../node_modules/.pnpm/zod@4.6.7/node_modules/zod/v3/helpers/util.js
 var util;
@@ -56419,7 +56700,7 @@ function createMcpServer(options) {
     if (code !== EXIT.ok)
       return text(io.err() || `measure failed (exit ${String(code)})`, true);
     const report = parseReport(JSON.parse(io.out()));
-    const output2 = input2.output === void 0 ? join17(await mkdtemp(join17(tmpdir(), "usertax-mcp-")), "report.json") : path(input2.output);
+    const output2 = input2.output === void 0 ? join18(await mkdtemp(join18(tmpdir(), "usertax-mcp-")), "report.json") : path(input2.output);
     await writeFile4(output2, io.out());
     const warnings = io.err().trim();
     return text([
@@ -56531,7 +56812,7 @@ async function mcpCommand(argv, io, options, transport) {
 }
 
 // ../cli/dist/version.js
-var VERSION = true ? "0.3.0" : createRequire(import.meta.url)("../package.json").version;
+var VERSION = true ? "0.4.0" : createRequire(import.meta.url)("../package.json").version;
 
 // ../cli/dist/index.js
 var version2 = VERSION;
@@ -56615,7 +56896,7 @@ function global(argv, io) {
 // src/base.ts
 import { mkdtemp as mkdtemp2, rm, writeFile as writeFile5 } from "node:fs/promises";
 import { tmpdir as tmpdir2 } from "node:os";
-import { join as join18 } from "node:path";
+import { join as join19 } from "node:path";
 var BASE_ARTIFACT_PREFIX = "usertax-base-";
 var REPORT_FILE = "usertax-report.json";
 async function mergeBase(gh, baseRef, headSha) {
@@ -56640,12 +56921,12 @@ async function findBaseReport(gh, sha, maxAncestors = 20) {
       (a) => !a.expired && a.name === `${BASE_ARTIFACT_PREFIX}${candidate}`
     );
     if (artifact === void 0) continue;
-    const dir = await mkdtemp2(join18(tmpdir2(), "usertax-base-"));
+    const dir = await mkdtemp2(join19(tmpdir2(), "usertax-base-"));
     try {
-      const zip = join18(dir, "artifact.zip");
+      const zip = join19(dir, "artifact.zip");
       await writeFile5(zip, await gh.downloadArtifact(artifact.id));
-      const report = parseReport(
-        JSON.parse((await readZipFile(zip, REPORT_FILE)).toString("utf8"))
+      const report = parseReportText(
+        (await readZipFile(zip, REPORT_FILE, REPORT_LIMITS.maxBytes)).toString("utf8")
       );
       return { found: true, report, sha: candidate, behind };
     } finally {
@@ -56862,12 +57143,11 @@ async function setCommitStatus(gh, sha, status, targetUrl, log) {
 }
 
 // src/run.ts
-var MAX_REPORT_BYTES = 2e7;
 var BASE_EVENTS = /* @__PURE__ */ new Set(["push", "workflow_dispatch", "schedule"]);
 async function readEvent(env) {
   const path = env["GITHUB_EVENT_PATH"];
   if (path === void 0 || path === "") return {};
-  return JSON.parse(await readFile13(path, "utf8"));
+  return JSON.parse(await readFile14(path, "utf8"));
 }
 function short(sha) {
   return sha.slice(0, 7);
@@ -56906,14 +57186,20 @@ async function measure(ctx) {
   return output2;
 }
 async function readHeadReport(path) {
-  const info = await stat8(path).catch(() => void 0);
+  const info = await stat9(path).catch(() => void 0);
   if (info === void 0)
     throw new InputError(
       `head report ${path} not found; download the measure workflow's artifact first`
     );
-  if (info.size > MAX_REPORT_BYTES)
-    throw new InputError(`head report ${path} is larger than ${MAX_REPORT_BYTES} bytes`);
-  return parseReport(JSON.parse(await readFile13(path, "utf8")));
+  if (info.size > REPORT_LIMITS.maxBytes)
+    throw new InputError(`head report ${path} is larger than ${REPORT_LIMITS.maxBytes} bytes`);
+  try {
+    return parseReportText(await readFile14(path, "utf8"));
+  } catch (error62) {
+    if (error62 instanceof ReportValidationError)
+      throw new InputError(`head report ${path}: ${error62.message}`);
+    throw error62;
+  }
 }
 async function loadTrustedConfig(ctx) {
   try {
